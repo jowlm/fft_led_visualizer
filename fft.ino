@@ -1,4 +1,14 @@
+#include <FastLED.h>
 #include <arduinoFFT.h>
+
+#define LED_TYPE    WS2811
+#define COLOR_ORDER    GRB
+#define NUM_LEDS       250
+#define LED_PIN         32
+
+const int analogInPin = A0;
+uint8_t hue = 300;
+CRGB leds[NUM_LEDS];
 
 #define SAMPLES         1024          
 #define SAMPLING_FREQ   18000         
@@ -18,9 +28,10 @@ unsigned long newTime;
 arduinoFFT FFT = arduinoFFT(vReal, vImag, SAMPLES, SAMPLING_FREQ);
 
 void setup() {
-
-Serial.begin(115200);
-sampling_period_us = round(1000000 * (1.0 / SAMPLING_FREQ));
+    FastLED.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(leds, NUM_LEDS);
+    FastLED.setBrightness(100);
+    Serial.begin(115200);
+    sampling_period_us = round(1000000 * (1.0 / SAMPLING_FREQ));
 }
 
 void loop() {
@@ -41,10 +52,14 @@ void loop() {
   
   //Serial.println("Computed magnitudes:");
   //PrintVector(vReal, (SAMPLES >> 1), SCL_FREQUENCY);
-  Serial.print(" ");
+  //Serial.print(" ");
+  
   Serial.print(maxArray(vReal, (SAMPLES >> 1)));
   Serial.println();
-  
+
+  if(maxArray(vReal, (SAMPLES >> 1))>10000.0){
+    multi_loop();
+  }
 }
 
 
@@ -70,11 +85,36 @@ void PrintVector(double *vData, uint16_t bufferSize)
 float maxArray(double *vData, uint16_t bufferSize){
   float max_v = 0.0;
   for (uint16_t i = 0; i < bufferSize; i++){
+    if(vData[i]>NOISE)
+    {
        if ( vData[i] > max_v )
         {
           max_v = vData[i];
        }
-    
+    }
   }
   return max_v;
+}
+void show_func(int val){
+      
+      //Serial.println(val);
+      leds[val] = CHSV(hue, 255, 255);
+      FastLED.show(); 
+      fadeToBlackBy(leds,NUM_LEDS,40);   
+      hue++;
+}
+
+int multi_loop(){        
+    
+    int prev_sawtooth = 0;
+    int sawtooth = 0;
+    while (prev_sawtooth <= sawtooth){
+      prev_sawtooth = sawtooth;
+      sawtooth = map(beat8(80, 0), 0, 255, 0, 200);
+      show_func(sawtooth);
+      
+      
+    }
+      //while(1){}
+      return sawtooth;
 }
